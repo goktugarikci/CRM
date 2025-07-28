@@ -16,9 +16,17 @@ builder.Services.AddDbContext<CRMAppDbContext>(options =>
     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
 // 2. ASP.NET Core Identity sistemini ekliyoruz.
-// Kullanýcýlar (Kullanicilar) ve Roller (Roller) sýnýflarýmýzý kullanacaðýný belirtiyoruz.
-// Verileri CRMAppDbContext üzerinden yöneteceðini söylüyoruz.
-builder.Services.AddIdentity<Kullanicilar, Roller>()
+builder.Services.AddIdentity<Kullanicilar, Roller>(options =>
+{
+    // Gelistirme ortami icin sifre kurallarini basitlesitiyoruz.
+    // Dilerseniz bu kurallari projenizin gereksinimlerine gore sýkýlaþtýrabilirsiniz.
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequiredLength = 3;
+    options.Password.RequiredUniqueChars = 1;
+})
     .AddEntityFrameworkStores<CRMAppDbContext>()
     .AddDefaultTokenProviders();
 
@@ -33,7 +41,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = false; // Gelistirme icin false
     options.TokenValidationParameters = new TokenValidationParameters()
     {
         ValidateIssuer = true,
@@ -52,7 +60,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "CRM API", Version = "v1" });
-    // Swagger'a JWT ile yetkilendirme yapabilmesi için gerekli ayarlarý ekliyoruz.
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -82,7 +89,6 @@ var app = builder.Build();
 
 // --- Uygulama Hattýnýn (Pipeline) Yapýlandýrýlmasý ---
 
-// Geliþtirme ortamýndaysa, detaylý hata sayfalarý ve Swagger'ý aktif et.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -91,7 +97,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Kimlik doðrulama (Authentication) ve Yetkilendirme (Authorization) mekanizmalarýný aktif et.
 // ÖNEMLÝ: UseAuthentication, UseAuthorization'dan ÖNCE gelmelidir.
 app.UseAuthentication();
 app.UseAuthorization();
@@ -100,18 +105,13 @@ app.MapControllers();
 
 
 // --- Veri Tohumlama (Data Seeding) ---
-// Uygulama baþlarken veritabanýnda baþlangýç verilerinin (roller, süper admin vb.)
-// olduðundan emin olmak için DataSeeder'ý çalýþtýrýyoruz.
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var loggerFactory = services.GetRequiredService<ILoggerFactory>();
     try
     {
-        var userManager = services.GetRequiredService<UserManager<Kullanicilar>>();
-        var roleManager = services.GetRequiredService<RoleManager<Roller>>();
-        var context = services.GetRequiredService<CRMAppDbContext>();
-        await DataSeeder.SeedRolesAndSuperAdminAsync(userManager, roleManager, context);
+        await DataSeeder.SeedRolesAndSuperAdminAsync(services);
     }
     catch (Exception ex)
     {
