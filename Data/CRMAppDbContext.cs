@@ -25,7 +25,7 @@ namespace CRM.Data
         public virtual DbSet<Siparisler> Siparislers { get; set; }
         public virtual DbSet<Sirketler> Sirketlers { get; set; }
         public virtual DbSet<StokHareketleri> StokHareketleris { get; set; }
-        public virtual DbSet<StokKartlari> StokKartlaris { get; set; }
+        public virtual DbSet<StokKartlari> StokKartlaris { get; set; } // EKLENDI
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

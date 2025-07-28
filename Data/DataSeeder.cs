@@ -7,26 +7,29 @@ namespace CRM.Data
 {
     public static class DataSeeder
     {
-        public static async Task SeedRolesAndSuperAdminAsync(UserManager<Kullanicilar> userManager, RoleManager<Roller> roleManager, CRMAppDbContext context)
+        public static async Task SeedRolesAndSuperAdminAsync(IServiceProvider services)
         {
-            // Veritabaninin olusturuldugundan ve migration'larin uygulandigindan emin ol.
-            await context.Database.MigrateAsync();
+            // Gerekli servisleri alıyoruz.
+            var userManager = services.GetRequiredService<UserManager<Kullanicilar>>();
+            var roleManager = services.GetRequiredService<RoleManager<Roller>>();
+            var context = services.GetRequiredService<CRMAppDbContext>();
 
             Console.WriteLine("Veri tohumlama basladi...");
 
             // 1. "Sistem Yönetimi" sirketini olustur
-            if (!await context.Sirketlers.AnyAsync(s => s.SirketAdi == Constants.Sirket.SistemSirketiAdi))
+            // AnyAsync() yerine FirstOrDefaultAsync() kullanarak hem kontrol edip hem de nesneyi aliyoruz.
+            var systemCompany = await context.Sirketlers.FirstOrDefaultAsync(s => s.SirketAdi == Constants.Sirket.SistemSirketiAdi);
+            if (systemCompany == null)
             {
-                var sistemSirketi = new Sirketler
+                systemCompany = new Sirketler
                 {
                     SirketAdi = Constants.Sirket.SistemSirketiAdi,
                     KayitTarihi = DateTime.UtcNow
                 };
-                await context.Sirketlers.AddAsync(sistemSirketi);
+                await context.Sirketlers.AddAsync(systemCompany);
                 await context.SaveChangesAsync();
                 Console.WriteLine("'Sistem Yonetimi' sirketi olusturuldu.");
             }
-            var systemCompany = await context.Sirketlers.SingleAsync(s => s.SirketAdi == Constants.Sirket.SistemSirketiAdi);
 
             // 2. Temel rolleri olustur
             var roles = new List<string>
@@ -49,7 +52,7 @@ namespace CRM.Data
                     {
                         Name = roleName,
                         SirketId = systemCompany.SirketId, // Tum temel roller sistem sirketine aittir
-                        RolDerecesi = rolDerecesiCounter++ // Rol derecelerini sirayla ata
+                        RolDerecesi = rolDerecesiCounter++
                     });
                     Console.WriteLine($"'{roleName}' rolu olusturuldu.");
                 }
@@ -69,7 +72,6 @@ namespace CRM.Data
                     AktifMi = true
                 };
 
-                // ÖNEMLİ: Sifre "Pa$$w0rd123!"
                 var result = await userManager.CreateAsync(superAdmin, "Pa$$w0rd123!");
 
                 if (result.Succeeded)

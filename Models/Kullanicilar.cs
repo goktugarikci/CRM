@@ -1,8 +1,4 @@
-﻿// --- Dosya: Models/Kullanicilar.cs ---
-// Bu, Identity ile uyumlu, en sade ve doğru Kullanicilar sinifidir.
-// Lutfen projenizdeki dosyayi bu icerikle tamamen degistirin.
-
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
 namespace CRM.Models
